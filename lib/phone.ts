@@ -8,6 +8,25 @@ export function normalizeE164(raw: string): string | null {
   return digits;
 }
 
+// Pull a phone-number-ish substring out of free text. Prefers E.164 form,
+// then 10/11-digit US patterns. Returns the raw matched string (not normalized);
+// hand the result to normalizeE164 to get the canonical form.
+export function extractPhoneNumber(text: string): string | null {
+  // E.164 with explicit +: most reliable signal a string is a phone number
+  const e164 = text.match(/\+\d{10,15}/);
+  if (e164) return e164[0];
+
+  // US format with delimiters: (801) 555-1234, 801-555-1234, 801.555.1234, 801 555 1234
+  const formatted = text.match(
+    /(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}/,
+  );
+  if (formatted) return formatted[0];
+
+  // Bare 10 or 11 digit run, but only if it's clearly a phone number context
+  // (the caller-id "from" line, etc). Too greedy as a general matcher.
+  return null;
+}
+
 // Pretty-print US numbers, fall back to a +<digits> form for everything else.
 export function formatPhone(e164: string): string {
   if (e164.length === 11 && e164.startsWith("1")) {
